@@ -1,7 +1,11 @@
 # Mine
+output
 corpora
 models
 *.out
+data
+prueba_pyserini_tmp
+aduana_quantit
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
