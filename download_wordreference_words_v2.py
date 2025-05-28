@@ -7,19 +7,19 @@ nohup python -u download_wordreference_words_v2.py --outdir output/wordreference
 nohup python -u download_wordreference_words_v2.py --outdir output/wordreference_words/en --lang en > output/wordreference_words/en.log 2>&1 &
 """
 
-import os
-import logging
 import argparse
-from dataclasses import dataclass
-import time
+import logging
+import os
 import random
+import re
+import time
+from dataclasses import dataclass
 from typing import List, Optional
 
 import requests
 from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from tqdm import tqdm
-import re
+from urllib3.util.retry import Retry
 
 # Configure logging
 logging.basicConfig(
@@ -27,6 +27,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Config:
@@ -48,9 +49,11 @@ class Downloader:
 
     def _init_session(self) -> requests.Session:
         session = requests.Session()
-        session.headers.update({
-            "User-Agent": self.config.user_agent,
-        })
+        session.headers.update(
+            {
+                "User-Agent": self.config.user_agent,
+            }
+        )
         retry_strategy = Retry(
             total=self.config.retries,
             status_forcelist=[429, 500, 502, 503, 504],
@@ -83,11 +86,11 @@ class Downloader:
                 download_audios(self.session, word, word_dir, self.config.lang, self.config.timeout)
             except Exception as e:
                 logger.warning(f"Error processing '{word}': {e}")
-            
+
             # Sleep randomly:
             time.sleep(random.uniform(0, 2))
 
-            if (i + 1) % 100 == 0:
+            if (i + 1) % 1000 == 0:
                 logger.info(f"Processed {i + 1} words, sleeping for a moment...")
                 time.sleep(10)
 
@@ -161,7 +164,7 @@ def download_search_words(session: requests.Session, lang: str, timeout: int) ->
     logger.info(f"Fetching words from {url}")
     resp = session.get(url, timeout=timeout)
     resp.raise_for_status()
-    text = resp.text.replace("ń", "ñ").replace("Ń", "Ñ") # fix for ñ error...
+    text = resp.text.replace("ń", "ñ").replace("Ń", "Ñ")  # fix for ñ error...
     words = [w.strip() for w in text.splitlines() if w.strip()]
     if not words:
         raise RuntimeError("Word list is empty.")
@@ -172,7 +175,7 @@ def download_search_words(session: requests.Session, lang: str, timeout: int) ->
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Download WordReference audio files.")
     parser.add_argument("--outdir", required=True)
-    parser.add_argument("--lang", required=True, choices=["es","en"] )
+    parser.add_argument("--lang", required=True, choices=["es", "en"])
     args = parser.parse_args()
     config = Config(outdir=args.outdir, lang=args.lang)
     Downloader(config).run()
